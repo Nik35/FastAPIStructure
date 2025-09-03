@@ -1,6 +1,6 @@
 from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
-from models import DnsRequest, DnsRecord
+from app.models import DnsRequest, DnsRecord
 from app.schemas.response import LogMessage
 from app.core.logging import get_logger
 import time
