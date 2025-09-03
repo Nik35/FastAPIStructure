@@ -21,4 +21,4 @@ app.include_router(dns.router, prefix="/api/v1/dns", tags=["dns"])
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the DNS Orcheator API"}
+    return {"message": "Welcome to the DNS Orchestrator API"}
