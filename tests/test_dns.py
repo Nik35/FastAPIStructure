@@ -1,7 +1,8 @@
 import requests
 import uuid
+import os
 
-API_URL = "http://127.0.0.1:8000/api/v1/dns/create"
+API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000/api/v1/dns/create")
 
 def test_create_dns_request():
     request_data = {
