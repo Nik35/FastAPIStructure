@@ -29,7 +29,7 @@ def consume_dns_requests():
                 "domain": payload.get("domain"),
                 "target": payload.get("target"),
                 "comment": payload.get("comment"),
-                "config": payload.get("config") # Include config from Kafka payload
+                "config": payload.get("config") # Include config from Kafka payload.
             }
         }
 
