@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+kafka-python
+requests
+pytest
+celery
+redis
