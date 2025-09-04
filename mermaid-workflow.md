@@ -5,21 +5,30 @@ This document contains the workflow diagrams for the project.
 ## Updated Workflow Diagram
 ```mermaid
 flowchart TD
-    A[Kafka Message Received] --> B[API Adapter Processes Request]
-    B --> C[Call Actual API]
-    C --> D[Trigger Celery Task]
-    D --> E[Process Completed]
-```
+    A[User] -->|API Request| B[API Gateway]
+    A -->|Kafka Message| C[Kafka Adaptor]
+    B --> D[Service A]
+    B --> E[Service B]
+    C --> D
+    C --> E
+    D --> F[Database A]
+    E --> G[Database B]
+    F -->|Response| B
+    G -->|Response| B
+    B -->|Response| A
+    C -->|Response| A
 
-## Sequence Diagram
-```mermaid
-sequenceDiagram
-    participant User
-    participant System
-    User->>System: Send Kafka Message
-    System->>API Adapter: Process Message
-    API Adapter->>Actual API: Make API Call
-    Actual API-->>API Adapter: Response
-    API Adapter->>Celery: Trigger Task
-    Celery-->>System: Task Completed
+%% Expanded Details
+
+A[User] -->|Interacts with the system via API or Kafka| B[API Gateway]
+B[API Gateway] -->|Routes requests to appropriate services| D[Service A]
+B[API Gateway] -->|Routes requests to appropriate services| E[Service B]
+C[Kafka Adaptor] -->|Handles messages from Kafka and routes to services| D[Service A]
+C[Kafka Adaptor] -->|Handles messages from Kafka and routes to services| E[Service B]
+D[Service A] -->|Stores data in| F[Database A]
+E[Service B] -->|Stores data in| G[Database B]
+F[Database A] -->|Sends response back to| B[API Gateway]
+G[Database B] -->|Sends response back to| B[API Gateway]
+B[API Gateway] -->|Responds to user| A[User]
+C[Kafka Adaptor] -->|Sends response back to user| A[User]
 ```
