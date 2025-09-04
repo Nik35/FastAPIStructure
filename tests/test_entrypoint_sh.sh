@@ -51,4 +51,5 @@ bash entrypoint.sh echo "App started again"
 echo "Test PASSED: entrypoint.sh does not re-init migrations if already present"
 
 # Cleanup
+rm -rf "$test_dir"
 echo "All entrypoint.sh tests passed."
