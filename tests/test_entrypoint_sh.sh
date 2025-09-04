@@ -51,5 +51,11 @@ bash entrypoint.sh echo "App started again"
 echo "Test PASSED: entrypoint.sh does not re-init migrations if already present"
 
 # Cleanup
-rm -rf "$test_dir"
+# Safety check before deleting test_dir
+if [[ -n "$test_dir" && -d "$test_dir" && "$test_dir" == /tmp/* ]]; then
+  rm -rf "$test_dir"
+else
+  echo "Refusing to delete test_dir: unsafe value '$test_dir'"
+  exit 1
+fi
 echo "All entrypoint.sh tests passed."
