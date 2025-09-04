@@ -14,27 +14,82 @@ This project provides a robust and scalable backend API for a DNS request orches
 - `app/schemas/response.py`: Contains Pydantic models for response serialization.
 - `app/api/v1/endpoints/dns.py`: Defines the `/v1/dns` API endpoints.
 - `app/tasks.py`: Defines Celery tasks, including the Ansible job simulation.
-- `models.py`: Defines the SQLAlchemy ORM models.
+- `app/models/models.py`: Defines the SQLAlchemy ORM models (moved from schemas/models.py).
 - `requirements.txt`: Lists all Python dependencies.
-- `run_consumer.py`: A script to start the Kafka consumer.
+- `scripts/run_consumer.py`: Script to start the Kafka consumer (moved from root).
+# Database Migrations (Alembic)
+
+Alembic is used for handling database migrations. Basic commands:
+
+1. **Initialize Alembic**
+    ```bash
+    alembic init migrations
+    ```
+2. **Configure Alembic**
+    - Edit `migrations/env.py` to set your SQLAlchemy `Base` and database URL.
+    - Example:
+      ```python
+      from app.core.database import Base
+      target_metadata = Base.metadata
+      ```
+3. **Create a Migration**
+    ```bash
+    alembic revision --autogenerate -m "Initial migration"
+    ```
+4. **Apply Migrations**
+    ```bash
+    alembic upgrade head
+    ```
+
+See `ALEMBIC_SETUP.md` for more details.
 
 ## Development Setup
+
 
 ### Running with Docker Compose (Recommended)
 
 This is the recommended way to run the application for development. It will start the FastAPI application, PostgreSQL, Kafka, Redis, and the Celery worker with a single command.
 
+**Automatic Database Migrations:**
+
+The Docker setup now automatically initializes Alembic (if not already present) and applies all database migrations before starting the app, worker, or consumer. This is handled by the `entrypoint.sh` script, so you do not need to run Alembic commands manually.
+
+
+**Steps:**
+
 1.  **Install Docker and Docker Compose**
 
     Ensure you have Docker and Docker Compose installed on your system.
 
-2.  **Run Docker Compose**
+2.  **Run Docker Compose with Environment Selection**
 
+    By default, the app uses `.env.dev`. To use a different environment (e.g., UTA or prod), set the ENV variable:
+
+    **Windows PowerShell:**
+    ```powershell
+    $env:ENV="uta"; docker-compose up --build
+    $env:ENV="prod"; docker-compose up --build
+    ```
+
+    **Linux/macOS Bash:**
     ```bash
-    docker-compose up --build
+    ENV=uta docker-compose up --build
+    ENV=prod docker-compose up --build
     ```
 
     The API will be available at `http://127.0.0.1:8000`.
+
+---
+
+**Note:**
+
+- The `entrypoint.sh` script will:
+    - Wait for the database to be ready
+    - Initialize Alembic migrations if the `migrations/` folder does not exist
+    - Always run `alembic upgrade head` to apply migrations
+    - Start the main service (app, worker, or consumer)
+
+You can find and customize this logic in `entrypoint.sh`.
 
 ### Running Individual Components with Docker
 
@@ -91,6 +146,7 @@ If you want to run each component as a separate Docker container, you can follow
 
 ### Manual Setup
 
+
 If you prefer to run the services manually, you can follow these steps:
 
 #### 1. Install PostgreSQL, Redis, and Kafka
@@ -117,9 +173,24 @@ It is highly recommended to use a Python virtual environment.
 pip install -r requirements.txt
 ```
 
-#### 3. Set Environment Variables
 
-Set the following environment variables:
+#### 3. Set Environment Variables (Recommended: .env files)
+
+This project supports environment-specific configuration using `.env` files. Three example files are provided:
+
+- `.env.dev` — for development
+- `.env.uta` — for User Testing Acceptance
+- `.env.prod` — for production
+
+Copy the appropriate file to `.env` before running the application. For example:
+
+```bash
+cp .env.dev .env
+```
+
+The application will automatically load environment variables from `.env` using `python-dotenv`.
+
+If you prefer, you can still set environment variables manually as shown below:
 
 ```bash
 export DATABASE_URL="postgresql://user:password@localhost/dns_orchestrator"
@@ -131,10 +202,21 @@ export API_URL="http://localhost:8000/api/v1/dns/create"
 
 #### 4. Run the Backend Server
 
-Start the FastAPI server using uvicorn.
 
+Start the FastAPI server using uvicorn, specifying the environment (dev, uta, prod):
+
+**Windows PowerShell:**
+```powershell
+$env:ENV="dev"; uvicorn app.main:app --reload
+$env:ENV="uta"; uvicorn app.main:app --reload
+$env:ENV="prod"; uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+**Linux/macOS Bash:**
 ```bash
-uvicorn app.main:app --reload
+ENV=dev uvicorn app.main:app --reload
+ENV=uta uvicorn app.main:app --reload
+ENV=prod uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at `http://127.0.0.1:8000`.

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from models import DnsRequest
+from app.models.models import DnsRequest
 from app.schemas.request import DnsRequestCreate
 from app.schemas.response import DnsRequestStatus, ResponseContext, LogMessage
 from app.core.logging import get_logger

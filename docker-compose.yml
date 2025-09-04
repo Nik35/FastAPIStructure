@@ -44,25 +44,45 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: "postgresql://user:password@postgres/dns_orchestrator"
-      KAFKA_BROKER_URL: "kafka:29092"
-      CELERY_BROKER_URL: "redis://redis:6379/0"
+  ENV: ${ENV:-dev}
+  DATABASE_URL: "postgresql://user:password@postgres/dns_orchestrator"
+  KAFKA_BROKER_URL: "kafka:29092"
+  CELERY_BROKER_URL: "redis://redis:6379/0"
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_USER: user
+  DB_PASSWORD: password
+  DB_NAME: dns_orchestrator
 
   consumer:
     build: .
     depends_on:
       - kafka
     command: python run_consumer.py
+    entrypoint: ["/app/entrypoint.sh"]
     environment:
-      DATABASE_URL: "postgresql://user:password@postgres/dns_orchestrator"
-      KAFKA_BROKER_URL: "kafka:29092"
-      API_URL: "http://app:8000/api/v1/dns/create"
+  ENV: ${ENV:-dev}
+  DATABASE_URL: "postgresql://user:password@postgres/dns_orchestrator"
+  KAFKA_BROKER_URL: "kafka:29092"
+  API_URL: "http://app:8000/api/v1/dns/create"
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_USER: user
+  DB_PASSWORD: password
+  DB_NAME: dns_orchestrator
 
   worker:
     build: .
     depends_on:
       - redis
     command: celery -A app.tasks worker --loglevel=info -Q dns_tasks
+    entrypoint: ["/app/entrypoint.sh"]
     environment:
-      DATABASE_URL: "postgresql://user:password@postgres/dns_orchestrator"
-      CELERY_BROKER_URL: "redis://redis:6379/0"
+  ENV: ${ENV:-dev}
+  DATABASE_URL: "postgresql://user:password@postgres/dns_orchestrator"
+  CELERY_BROKER_URL: "redis://redis:6379/0"
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_USER: user
+  DB_PASSWORD: password
+  DB_NAME: dns_orchestrator

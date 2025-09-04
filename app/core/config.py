@@ -1,4 +1,13 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from the correct .env file based on ENV
+env = os.getenv("ENV", "dev")
+dotenv_file = f".env.{env}"
+if os.path.exists(dotenv_file):
+    load_dotenv(dotenv_file)
+else:
+    load_dotenv()
 
 class Settings:
     DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/dns_orchestrator")

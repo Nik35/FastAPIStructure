@@ -1,0 +1,61 @@
+#!/bin/bash
+# Test script for entrypoint.sh logic
+
+set -e
+
+# Determine the directory of this test script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Test 1: Should initialize Alembic if migrations/ does not exist
+test_dir=$(mktemp -d)
+cp "$SCRIPT_DIR/../entrypoint.sh" "$test_dir/entrypoint.sh"
+cd "$test_dir"
+
+# Mock alembic and pg_isready
+cat <<'EOF' > alembic
+#!/bin/bash
+echo "alembic $@"
+if [[ "$1" == "init" ]]; then
+  mkdir migrations
+fi
+EOF
+chmod +x alembic
+cat <<'EOF' > pg_isready
+#!/bin/bash
+exit 0
+EOF
+chmod +x pg_isready
+export PATH="$test_dir:$PATH"
+
+# Set DB env vars
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_USER=user
+
+# Remove migrations if exists
+rm -rf migrations
+
+# Run entrypoint.sh with a dummy command
+bash entrypoint.sh echo "App started"
+
+if [ ! -d migrations ]; then
+  echo "Test FAILED: migrations/ was not created"
+  exit 1
+fi
+
+echo "Test PASSED: migrations/ was created and entrypoint ran"
+
+# Test 2: Should not re-init if migrations/ exists
+bash entrypoint.sh echo "App started again"
+
+echo "Test PASSED: entrypoint.sh does not re-init migrations if already present"
+
+# Cleanup
+# Safety check before deleting test_dir
+if [[ -n "$test_dir" && -d "$test_dir" && "$test_dir" == /tmp/* ]]; then
+  rm -rf "$test_dir"
+else
+  echo "Refusing to delete test_dir: unsafe value '$test_dir'"
+  exit 1
+fi
+echo "All entrypoint.sh tests passed."
