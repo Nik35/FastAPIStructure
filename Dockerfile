@@ -16,5 +16,11 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Define the command to run the application
+# Make entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
+
+# Use entrypoint to handle Alembic migrations and app startup
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# Default command (can be overridden in docker-compose)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
