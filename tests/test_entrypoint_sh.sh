@@ -3,9 +3,12 @@
 
 set -e
 
+# Determine the directory of this test script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Test 1: Should initialize Alembic if migrations/ does not exist
 test_dir=$(mktemp -d)
-cp entrypoint.sh "$test_dir/entrypoint.sh"
+cp "$SCRIPT_DIR/../entrypoint.sh" "$test_dir/entrypoint.sh"
 cd "$test_dir"
 
 # Mock alembic and pg_isready
