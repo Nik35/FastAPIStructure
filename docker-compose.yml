@@ -44,7 +44,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-  ENV: ${ENV-dev}
+  ENV: ${ENV:-dev}
   DATABASE_URL: "postgresql://user:password@postgres/dns_orchestrator"
   KAFKA_BROKER_URL: "kafka:29092"
   CELERY_BROKER_URL: "redis://redis:6379/0"
