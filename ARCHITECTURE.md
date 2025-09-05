@@ -24,7 +24,7 @@ graph TD
     UserAPI -->|REST Request| FastAPI
     KafkaProd -->|Kafka Message| KafkaBroker
     KafkaBroker --> KafkaCons
-    KafkaCons -->|Validation/Checks| FastAPI
+        KafkaCons --> FastAPI
     FastAPI --> APILogic
     APILogic --> ReqTracker
     APILogic --> DB
@@ -39,6 +39,8 @@ graph TD
     FastAPI --> Logging
     KafkaCons --> Logging
     CeleryW --> Logging
+        APILogic --> Logging
+    ```
 ```
 
 
@@ -46,17 +48,18 @@ graph TD
 1. **User/API Client** or **External Kafka Producer** can initiate a DNS request:
     - User/API Client sends a REST request to the FastAPI API layer.
     - External system can send a message to Kafka Broker.
-2. **Kafka Consumer** (`run_consumer.py`) consumes messages from Kafka, performs validation/checks, and then calls the FastAPI API (as if it were a client).
-3. **API Layer** (FastAPI) receives requests (from user or Kafka consumer), routes to API logic.
-4. **API Logic** performs business operations, updates the **Request Tracker Table** for every action, interacts with the main database, and enqueues async tasks to Celery.
+
+2. **Kafka Consumer** (`run_consumer.py`) consumes messages from Kafka and calls the FastAPI API (as if it were a client).
+3. **API Layer** (FastAPI) receives requests (from user or Kafka consumer), immediately creates a new entry in the **Request Tracker Table** and starts logging.
+4. **API Logic** performs validation and business operations, updating the **Request Tracker Table** and logs at every step, interacts with the main database, and enqueues async tasks to Celery.
 5. **Celery Task Queue** receives async jobs, processed by **Celery Worker**.
-6. **Celery Worker** performs the actual DNS provisioning (e.g., via external DNS service), and updates the **Request Tracker Table** with results.
-7. **Observability:** All major actions are logged for traceability.
+6. **Celery Worker** performs the actual DNS provisioning (e.g., via external DNS service), and updates the **Request Tracker Table** and logs with results.
+7. **Observability:** Logging and request tracking start as soon as the request is received and are updated at every step for full traceability.
 
 **Key Points:**
 - Both Kafka and API are entry points for requests.
 - Kafka consumer always calls the API for business logic, ensuring a single flow.
-- All actions (API, Kafka, Celery) are tracked in the request tracker table for audit and status.
+- Request tracking and logging start as soon as the API receives a request and are updated at every step (API, Celery, etc.).
 
 ## 2. Directory Structure and Purpose
 
@@ -86,6 +89,7 @@ graph TD
 │   │   └── v2/           # Version 2 API routes
 │   │       └── api.py    # Route definitions for v2
 │   ├── models/           # SQLAlchemy database models
+│       └── migrations/   # Alembic migration scripts
 │   │   └── models.py     # Database models
 │   ├── schemas/          # Pydantic models for request/response validation
 │   │   ├── request.py    # Request models
@@ -103,7 +107,6 @@ graph TD
 │   └── .env.uta          # User Testing Acceptance environment variables
 ├── scripts/              # Standalone executable scripts (e.g., run_consumer.py)
 ├── tests/                # Unit and integration tests
-│   └── migrations/       # Alembic migration scripts (under models for consistency)
 ├── alembic.ini           # Alembic configuration file (if initialized)
 ├── pyproject.toml        # Poetry project definition and dependencies
 ├── poetry.lock           # Poetry lock file (exact dependency versions)
