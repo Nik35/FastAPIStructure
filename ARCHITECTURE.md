@@ -212,6 +212,7 @@ This project implements a dynamic API versioning strategy that allows for easy m
 *   **Clear Separation:** Enforces a clear distinction between different API versions.
 *   **Backward Compatibility:** Allows you to maintain older API versions while developing and deploying newer ones.
 
+---
 
 ## How to Extend
 
