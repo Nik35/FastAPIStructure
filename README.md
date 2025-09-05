@@ -24,7 +24,7 @@ This is the recommended way to run the entire application stack for development.
 
 **Automatic Database Migrations:**
 
-The Docker setup now automatically initializes Alembic (if not already present) and applies all database migrations before starting the app, worker, or consumer. This is handled by the `deployment/entrypoint.sh` script, so you do not need to run Alembic commands manually.
+The Docker setup now automatically initializes Alembic (if not already present) and applies all database migrations before starting the app, worker, or consumer. Alembic migrations are now located in `app/models/migrations/` for consistency. This is handled by the `deployment/entrypoint.sh` script, so you do not need to run Alembic commands manually.
 
 **Steps:**
 
@@ -56,8 +56,8 @@ The Docker setup now automatically initializes Alembic (if not already present) 
 
 - The `deployment/entrypoint.sh` script will:
     - Wait for the database to be ready
-    - Initialize Alembic migrations if the `migrations/` folder does not exist
-    - Always run `alembic upgrade head` to apply migrations
+    - Initialize Alembic migrations if the `app/models/migrations/` folder does not exist
+    - Always run `alembic -c alembic.ini upgrade head` to apply migrations
     - Start the main service (app, worker, or consumer)
 
 You can find and customize this logic in `deployment/entrypoint.sh`.

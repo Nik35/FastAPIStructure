@@ -8,36 +8,49 @@ The application is designed as a microservice that orchestrates DNS record creat
 
 ```mermaid
 graph TD
-    A[Client] --> B(FastAPI App);
-    B --> C{API Endpoints};
-    C --> D[API Logic];
-    D --> E(Database);
-    D --> F(Kafka Producer);
-    F --> G[Kafka Broker];
-    G --> H(Kafka Consumer);
-    H --> I(Celery Task Queue);
-    I --> J[Celery Worker];
-    J --> K(External DNS Service);
-    J --> E;
-    J --> L(Logging);
-    B --> L;
-    H --> L;
-    J --> L;
+    subgraph User Interaction
+        A1[User/API Client] 
+        A2[Kafka Producer (External System)]
+    end
+    A1 -->|REST Request| B(FastAPI API Layer)
+    A2 -->|Kafka Message| C[Kafka Broker]
+    C --> D[Kafka Consumer (run_consumer.py)]
+    D -->|Validation/Checks| B
+    B --> E[API Logic]
+    E --> F[Request Tracker Table]
+    E --> G[Database]
+    E --> H[Celery Task Queue]
+    H --> I[Celery Worker]
+    I --> J[External DNS Service]
+    I --> F
+    B --> F
+    D --> F
+    E --> F
+    I --> F
+    subgraph Observability
+        K[Logging]
+    end
+    B --> K
+    D --> K
+    I --> K
 ```
 
+
 **Explanation of Flow:**
-1.  **Client Interaction:** Clients (e.g., web UI, other services) send requests to the FastAPI App.
-2.  **FastAPI App:** Receives requests and routes them to appropriate API Endpoints.
-3.  **API Endpoints:** Defined in `app/routes/vX/routes.py`, these handle request parsing and delegate business logic to API Logic.
-4.  **API Logic:** Located in `app/api/vX/api.py`, this contains the core business logic, interacting with the Database and potentially producing messages to Kafka.
-5.  **Database (PostgreSQL):** Stores DNS request and record data.
-6.  **Kafka Producer:** API Logic can produce messages to Kafka for asynchronous processing.
-7.  **Kafka Broker:** Acts as a central message bus.
-8.  **Kafka Consumer:** A separate service (`scripts/run_consumer.py`) consumes messages from Kafka.
-9.  **Celery Task Queue:** Messages from Kafka (or direct calls from API Logic) can trigger Celery tasks.
-10. **Celery Worker:** Processes asynchronous tasks, such as interacting with an External DNS Service or updating the Database.
-11. **External DNS Service:** The actual service responsible for provisioning DNS records (e.g., AWS Route 53, Cloudflare).
-12. **Logging:** All components log their activities, providing observability.
+1. **User/API Client** or **External Kafka Producer** can initiate a DNS request:
+    - User/API Client sends a REST request to the FastAPI API layer.
+    - External system can send a message to Kafka Broker.
+2. **Kafka Consumer** (`run_consumer.py`) consumes messages from Kafka, performs validation/checks, and then calls the FastAPI API (as if it were a client).
+3. **API Layer** (FastAPI) receives requests (from user or Kafka consumer), routes to API logic.
+4. **API Logic** performs business operations, updates the **Request Tracker Table** for every action, interacts with the main database, and enqueues async tasks to Celery.
+5. **Celery Task Queue** receives async jobs, processed by **Celery Worker**.
+6. **Celery Worker** performs the actual DNS provisioning (e.g., via external DNS service), and updates the **Request Tracker Table** with results.
+7. **Observability:** All major actions are logged for traceability.
+
+**Key Points:**
+- Both Kafka and API are entry points for requests.
+- Kafka consumer always calls the API for business logic, ensuring a single flow.
+- All actions (API, Kafka, Celery) are tracked in the request tracker table for audit and status.
 
 ## 2. Directory Structure and Purpose
 
@@ -51,8 +64,9 @@ graph TD
 │   │   └── v2/           # Version 2 API logic
 │   │       └── api.py    # Logic for v2 endpoints
 │   ├── celery/           # Celery-related files
-│   │   ├── tasks.py      # Celery task definitions
-│   │   └── celery_app.py # Celery application instance
+│   │   └── tasks.py      # Celery task definitions
+│   ├── core/             # Core application components
+│   │   ├── celery_app.py # Celery application instance
 │   ├── core/             # Core application components
 │   │   ├── config.py     # Application settings and configuration
 │   │   ├── database.py   # Database connection and session management
@@ -62,13 +76,14 @@ graph TD
 │   │   └── consumer.py   # Kafka consumer logic
 │   ├── routes/           # API Routing Definitions
 │   │   ├── v1/           # Version 1 API routes
-│   │   │   └── routes.py # Route definitions for v1
+│   │   │   └── api.py    # Route definitions for v1
 │   │   └── v2/           # Version 2 API routes
-│   │       └── routes.py # Route definitions for v2
-│   ├── schemas/          # Pydantic models for request/response validation and database models
+│   │       └── api.py    # Route definitions for v2
+│   ├── models/           # SQLAlchemy database models
+│   │   └── models.py     # Database models
+│   ├── schemas/          # Pydantic models for request/response validation
 │   │   ├── request.py    # Request models
-│   │   ├── response.py   # Response models
-│   │   └── models.py     # SQLAlchemy database models
+│   │   └── response.py   # Response models
 │   └── utils/            # General-purpose utility functions/modules (e.g., helpers, common functions)
 ├── deployment/           # Deployment-related files (Docker, Kubernetes/OpenShift manifests)
 │   ├── Dockerfile.app    # Dockerfile for the FastAPI application image
@@ -82,7 +97,7 @@ graph TD
 │   └── .env.uta          # User Testing Acceptance environment variables
 ├── scripts/              # Standalone executable scripts (e.g., run_consumer.py)
 ├── tests/                # Unit and integration tests
-├── alembic/              # Alembic migration scripts (if initialized)
+├── app/models/migrations/ # Alembic migration scripts (now under models for consistency)
 ├── alembic.ini           # Alembic configuration file (if initialized)
 ├── pyproject.toml        # Poetry project definition and dependencies
 ├── poetry.lock           # Poetry lock file (exact dependency versions)

@@ -1,3 +1,21 @@
+# Alembic Directory Structure and Integration
+
+Alembic migration scripts are stored in:
+
+	app/models/migrations/
+
+The Alembic configuration file is located at the project root:
+
+	alembic.ini
+
+This setup keeps all database migration logic close to your models for consistency and easier maintenance. The `script_location` in `alembic.ini` is set to `app/models/migrations` to ensure Alembic uses the correct folder.
+
+**Summary:**
+- Migration scripts: `app/models/migrations/versions/`
+- Alembic config: `alembic.ini` (root)
+- Models: `app/models/models.py`
+
+All migration and upgrade commands should be run from the project root using the `-c alembic.ini` flag.
 # Alembic Migrations
 
 Alembic is used for handling database migrations. Follow these steps to set up and use Alembic in this project:
@@ -18,15 +36,16 @@ pip install -r requirements.txt
 
 ## 2. Initialize Alembic
 
-This will create a `migrations/` folder in your project root:
+
+This will create a `migrations/` folder under `app/models/`:
 
 ```
-alembic init migrations
+alembic init app/models/migrations
 ```
 
 ## 3. Configure Alembic
 
-- Edit `migrations/env.py` to set your SQLAlchemy `Base` and database URL.
+- Edit `app/models/migrations/env.py` to set your SQLAlchemy `Base` and database URL.
 - Example for FastAPI project:
 
 ```
@@ -40,7 +59,7 @@ target_metadata = Base.metadata
 To generate a migration after updating your models:
 
 ```
-alembic revision --autogenerate -m "Initial migration"
+alembic -c alembic.ini revision --autogenerate -m "Initial migration"
 ```
 
 ## 5. Apply Migrations
@@ -48,7 +67,7 @@ alembic revision --autogenerate -m "Initial migration"
 To apply migrations to your database:
 
 ```
-alembic upgrade head
+alembic -c alembic.ini upgrade head
 ```
 
 ---
