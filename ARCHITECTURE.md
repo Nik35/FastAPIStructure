@@ -8,31 +8,37 @@ The application is designed as a microservice that orchestrates DNS record creat
 
 ```mermaid
 graph TD
-    subgraph User Interaction
-        A1[User/API Client] 
-        A2[Kafka Producer (External System)]
-    end
-    A1 -->|REST Request| B(FastAPI API Layer)
-    A2 -->|Kafka Message| C[Kafka Broker]
-    C --> D[Kafka Consumer (run_consumer.py)]
-    D -->|Validation/Checks| B
-    B --> E[API Logic]
-    E --> F[Request Tracker Table]
-    E --> G[Database]
-    E --> H[Celery Task Queue]
-    H --> I[Celery Worker]
-    I --> J[External DNS Service]
-    I --> F
-    B --> F
-    D --> F
-    E --> F
-    I --> F
-    subgraph Observability
-        K[Logging]
-    end
-    B --> K
-    D --> K
-    I --> K
+    UserAPI[User/API Client]
+    KafkaProd[Kafka Producer]
+    KafkaBroker[Kafka Broker]
+    KafkaCons[Kafka Consumer]
+    FastAPI[FastAPI API Layer]
+    APILogic[API Logic]
+    ReqTracker[Request Tracker Table]
+    DB[Database]
+    CeleryQ[Celery Task Queue]
+    CeleryW[Celery Worker]
+    DNSService[External DNS Service]
+    Logging[Logging]
+
+    UserAPI -->|REST Request| FastAPI
+    KafkaProd -->|Kafka Message| KafkaBroker
+    KafkaBroker --> KafkaCons
+    KafkaCons -->|Validation/Checks| FastAPI
+    FastAPI --> APILogic
+    APILogic --> ReqTracker
+    APILogic --> DB
+    APILogic --> CeleryQ
+    CeleryQ --> CeleryW
+    CeleryW --> DNSService
+    CeleryW --> ReqTracker
+    FastAPI --> ReqTracker
+    KafkaCons --> ReqTracker
+    APILogic --> ReqTracker
+    CeleryW --> ReqTracker
+    FastAPI --> Logging
+    KafkaCons --> Logging
+    CeleryW --> Logging
 ```
 
 
@@ -97,7 +103,7 @@ graph TD
 │   └── .env.uta          # User Testing Acceptance environment variables
 ├── scripts/              # Standalone executable scripts (e.g., run_consumer.py)
 ├── tests/                # Unit and integration tests
-├── app/models/migrations/ # Alembic migration scripts (now under models for consistency)
+│   └── migrations/       # Alembic migration scripts (under models for consistency)
 ├── alembic.ini           # Alembic configuration file (if initialized)
 ├── pyproject.toml        # Poetry project definition and dependencies
 ├── poetry.lock           # Poetry lock file (exact dependency versions)
