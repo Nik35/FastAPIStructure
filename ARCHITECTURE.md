@@ -1,108 +1,6 @@
 #
 ---
 
-## How to Extend
-
-### Add a New API Version
-1. Copy `app/api/v1/` to `app/api/v3/` and update logic as needed.
-2. Copy `app/routes/v1/` to `app/routes/v3/`.
-3. The dynamic router registration in `main.py` will pick up the new version automatically.
-
-### Add a New Domain/Module (e.g., Users, Orders)
-1. Add models to `app/models/models.py`.
-2. Add schemas to `app/schemas/` (e.g., `user.py`, `request.py`, `response.py`).
-    - Always include both `request.py` and `response.py` for clear separation of request and response models.
-3. Add business logic to `app/api/vX/<domain>.py`.
-4. Add routes to `app/routes/vX/<domain>.py` and include them in the version’s router.
-5. Register the new router in `app/routes/vX/api.py` (if using sub-routers).
-
-### Add a New Celery Task
-1. Add the task function to `app/celery/tasks.py`.
-2. Register the task with the Celery app in `app/core/celery_app.py`.
-3. Document the task and its usage in the codebase.
-
-### Add a New Kafka Consumer or Producer
-1. Add consumer/producer logic to `app/kafka/`.
-2. For consumers, add a new script in `scripts/` if it should run as a separate process.
-3. Document the topic, message format, and flow in the codebase.
-
-### Add a New Environment
-1. Add a new `.env.<env>` file in the `env/` directory (e.g., `.env.staging`).
-2. Document any new variables in `.env.example`.
-
-### Add a New Service (Microservice or Internal API)
-1. Create a new folder under the project root (e.g., `user_service/`).
-2. Use the same structure as the main app: `api/`, `routes/`, `models/`, `schemas/`, `core/`, etc.
-3. Add a new Dockerfile and update `docker-compose.yml` to include the new service.
-4. Document the service’s endpoints, dependencies, and integration points in its own `README.md`.
-5. If the service needs to communicate with the main app, define clear API contracts (OpenAPI/Swagger or JSON schema).
-
-#### Example: New Service Template
-
-Suppose you want to add a new service called `user_service`. The recommended structure is:
-
-```
-user_service/
-├── api/
-│   └── v1/
-│       └── api.py
-├── routes/
-│   └── v1/
-│       └── api.py
-├── models/
-│   └── models.py
-│   └── migrations/
-├── schemas/
-│   ├── request.py
-│   └── response.py
-├── core/
-│   ├── config.py
-│   ├── database.py
-│   ├── logging.py
-│   └── celery_app.py
-├── celery/
-│   └── tasks.py
-├── kafka/
-│   └── consumer.py
-├── utils/
-│   └── __init__.py
-├── tests/
-│   └── test_user.py
-├── Dockerfile
-├── README.md
-└── ... (other deployment/config files as needed)
-```
-
-**Steps:**
-1. Copy this structure and adapt as needed for your new service domain.
-2. Register the service in `docker-compose.yml`.
-3. Document endpoints, dependencies, and integration points in the new service’s `README.md`.
-4. Use the same conventions and extension guidelines as the main app.
-
----
-
-## Conventions
-
-### Coding Standards
-
-- Follow [PEP8](https://peps.python.org/pep-0008/) for all Python code.
-- Use snake_case for file, function, and variable names.
-- Use PascalCase (CamelCase) for class names.
-- Use ALL_CAPS for constants.
-- Add type hints to all function signatures.
-- Use docstrings for all public modules, classes, and functions (PEP257).
-- Format code with `black` and organize imports with `isort`.
-- Use `flake8` for linting and code quality.
-- Keep lines ≤ 88 characters (black default).
-- Use descriptive commit messages: `<type>: <short description>` (e.g., `feat: add user endpoint`).
-- Place new API versions in `app/api/vX/` and `app/routes/vX/`.
-- All business logic goes in `api/`, routing in `routes/`.
-- Environment variables should be documented in `.env.example`.
-- Tests should be placed in the `tests/` directory and named `test_*.py`.
-# Application Architecture and Structure
-
-This document provides an overview of the application's architecture, its key components, and the purpose of each directory.
-
 ## 1. High-Level Architecture Flow
 
 The application is designed as a microservice that orchestrates DNS record creation, leveraging FastAPI for the API, Celery for asynchronous tasks, Kafka for messaging, and PostgreSQL for data persistence.
@@ -313,3 +211,106 @@ This project implements a dynamic API versioning strategy that allows for easy m
 *   **Maintainability:** Each version's logic and routing are self-contained, reducing complexity.
 *   **Clear Separation:** Enforces a clear distinction between different API versions.
 *   **Backward Compatibility:** Allows you to maintain older API versions while developing and deploying newer ones.
+
+
+## How to Extend
+
+### Add a New API Version
+1. Copy `app/api/v1/` to `app/api/v3/` and update logic as needed.
+2. Copy `app/routes/v1/` to `app/routes/v3/`.
+3. The dynamic router registration in `main.py` will pick up the new version automatically.
+
+### Add a New Domain/Module (e.g., Users, Orders)
+1. Add models to `app/models/models.py`.
+2. Add schemas to `app/schemas/` (e.g., `user.py`, `request.py`, `response.py`).
+    - Always include both `request.py` and `response.py` for clear separation of request and response models.
+3. Add business logic to `app/api/vX/<domain>.py`.
+4. Add routes to `app/routes/vX/<domain>.py` and include them in the version’s router.
+5. Register the new router in `app/routes/vX/api.py` (if using sub-routers).
+
+### Add a New Celery Task
+1. Add the task function to `app/celery/tasks.py`.
+2. Register the task with the Celery app in `app/core/celery_app.py`.
+3. Document the task and its usage in the codebase.
+
+### Add a New Kafka Consumer or Producer
+1. Add consumer/producer logic to `app/kafka/`.
+2. For consumers, add a new script in `scripts/` if it should run as a separate process.
+3. Document the topic, message format, and flow in the codebase.
+
+### Add a New Environment
+1. Add a new `.env.<env>` file in the `env/` directory (e.g., `.env.staging`).
+2. Document any new variables in `.env.example`.
+
+### Add a New Service (Microservice or Internal API)
+1. Create a new folder under the project root (e.g., `user_service/`).
+2. Use the same structure as the main app: `api/`, `routes/`, `models/`, `schemas/`, `core/`, etc.
+3. Add a new Dockerfile and update `docker-compose.yml` to include the new service.
+4. Document the service’s endpoints, dependencies, and integration points in its own `README.md`.
+5. If the service needs to communicate with the main app, define clear API contracts (OpenAPI/Swagger or JSON schema).
+
+#### Example: New Service Template
+
+Suppose you want to add a new service called `user_service`. The recommended structure is:
+
+```
+user_service/
+├── api/
+│   └── v1/
+│       └── api.py
+├── routes/
+│   └── v1/
+│       └── api.py
+├── models/
+│   └── models.py
+│   └── migrations/
+├── schemas/
+│   ├── request.py
+│   └── response.py
+├── core/
+│   ├── config.py
+│   ├── database.py
+│   ├── logging.py
+│   └── celery_app.py
+├── celery/
+│   └── tasks.py
+├── kafka/
+│   └── consumer.py
+├── utils/
+│   └── __init__.py
+├── tests/
+│   └── test_user.py
+├── Dockerfile
+├── README.md
+└── ... (other deployment/config files as needed)
+```
+
+**Steps:**
+1. Copy this structure and adapt as needed for your new service domain.
+2. Register the service in `docker-compose.yml`.
+3. Document endpoints, dependencies, and integration points in the new service’s `README.md`.
+4. Use the same conventions and extension guidelines as the main app.
+
+---
+
+## Conventions
+
+### Coding Standards
+
+- Follow [PEP8](https://peps.python.org/pep-0008/) for all Python code.
+- Use snake_case for file, function, and variable names.
+- Use PascalCase (CamelCase) for class names.
+- Use ALL_CAPS for constants.
+- Add type hints to all function signatures.
+- Use docstrings for all public modules, classes, and functions (PEP257).
+- Format code with `black` and organize imports with `isort`.
+- Use `flake8` for linting and code quality.
+- Keep lines ≤ 88 characters (black default).
+- Use descriptive commit messages: `<type>: <short description>` (e.g., `feat: add user endpoint`).
+- Place new API versions in `app/api/vX/` and `app/routes/vX/`.
+- All business logic goes in `api/`, routing in `routes/`.
+- Environment variables should be documented in `.env.example`.
+- Tests should be placed in the `tests/` directory and named `test_*.py`.
+# Application Architecture and Structure
+
+This document provides an overview of the application's architecture, its key components, and the purpose of each directory.
