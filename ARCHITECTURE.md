@@ -8,36 +8,42 @@ The application is designed as a microservice that orchestrates DNS record creat
 
 ```mermaid
 graph TD
-    A[Client] --> B(FastAPI App)
-    B --> C{API Endpoints}
-    C --> D[API Logic]
-    D --> E(Database)
-    D --> F(Kafka Producer)
-    F --> G[Kafka Broker]
-    G --> H(Kafka Consumer)
-    H --> I(Celery Task Queue)
-    I --> J[Celery Worker]
-    J --> K(External DNS Service)
-    J --> E
-    J --> L(Logging)
-    B --> L
-    H --> L
-    J --> L
+    UserAPI[User/API Client] --> FastAPI[FastAPI API Layer]
+    KafkaProd[Kafka Producer (External System)] --> KafkaBroker[Kafka Broker]
+    KafkaBroker --> KafkaCons[Kafka Consumer]
+    KafkaCons --> FastAPI
+
+    FastAPI --> APILogic[API Logic]
+    APILogic --> ReqTracker[Request Tracker Table]
+    APILogic --> DB[Database]
+    APILogic --> CeleryQ[Celery Task Queue]
+
+    CeleryQ --> CeleryW[Celery Worker]
+    CeleryW --> DNSService[External DNS Service]
+    CeleryW --> ReqTracker
+
+    FastAPI --> Logging[Logging]
+    APILogic --> Logging
+    KafkaCons --> Logging
+    CeleryW --> Logging
 ```
 
 **Explanation of Flow:**
-1.  **Client Interaction:** Clients (e.g., web UI, other services) send requests to the FastAPI App.
-2.  **FastAPI App:** Receives requests and routes them to appropriate API Endpoints.
-3.  **API Endpoints:** Defined in `app/routes/vX/routes.py`, these handle request parsing and delegate business logic to API Logic.
-4.  **API Logic:** Located in `app/api/vX/api.py`, this contains the core business logic, interacting with the Database and potentially producing messages to Kafka.
-5.  **Database (PostgreSQL):** Stores DNS request and record data.
-6.  **Kafka Producer:** API Logic can produce messages to Kafka for asynchronous processing.
-7.  **Kafka Broker:** Acts as a central message bus.
-8.  **Kafka Consumer:** A separate service (`scripts/run_consumer.py`) consumes messages from Kafka.
-9.  **Celery Task Queue:** Messages from Kafka (or direct calls from API Logic) can trigger Celery tasks.
-10. **Celery Worker:** Processes asynchronous tasks, such as interacting with an External DNS Service or updating the Database.
-11. **External DNS Service:** The actual service responsible for provisioning DNS records (e.g., AWS Route 53, Cloudflare).
-12. **Logging:** All components log their activities, providing observability.
+1.  **User/API Client** or **External Kafka Producer** can initiate a DNS request:
+    - User/API Client sends a REST request to the FastAPI API layer.
+    - External system sends a message to Kafka Broker.
+
+2.  **Kafka Consumer** (`scripts/run_consumer.py`) consumes messages from Kafka and calls the FastAPI API (as if it were a client).
+3.  **API Layer** (FastAPI) receives requests (from user or Kafka consumer), immediately creates a new entry in the **Request Tracker Table** and starts logging.
+4.  **API Logic** performs validation and business operations, updating the **Request Tracker Table** and logs at every step, interacts with the main database, and enqueues async tasks to Celery.
+5.  **Celery Task Queue** receives async jobs, processed by **Celery Worker**.
+6.  **Celery Worker** performs the actual DNS provisioning (e.g., via external DNS service), and updates the **Request Tracker Table** and logs with results.
+7.  **Observability:** Logging and request tracking start as soon as the request is received and are updated at every step for full traceability.
+
+**Key Points:**
+- Both Kafka and API are entry points for requests.
+- Kafka consumer always calls the API for business logic, ensuring a single flow.
+- Request tracking and logging start as soon as the API receives a request and are updated at every step (API, Celery, etc.).
 
 ## 2. Directory Structure and Purpose
 
