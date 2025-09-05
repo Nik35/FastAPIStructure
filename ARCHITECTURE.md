@@ -8,8 +8,8 @@ The application is designed as a microservice that orchestrates DNS record creat
 
 ```mermaid
 graph TD
-    UserAPI[User/API Client] --> FastAPI[FastAPI API Layer]
-    KafkaProd[Kafka Producer (External System)] --> KafkaBroker[Kafka Broker]
+    UserAPI[User API Client] --> FastAPI[FastAPI API Layer]
+    KafkaProd[Kafka Producer External System] --> KafkaBroker[Kafka Broker]
     KafkaBroker --> KafkaCons[Kafka Consumer]
     KafkaCons --> FastAPI
 
@@ -163,7 +163,6 @@ graph TD
 *   **`scripts/`**:
     *   **Purpose:** For standalone executable Python scripts that perform specific tasks (e.g., data migration scripts, one-off administrative tasks, consumer runners).
     *   **Content:** `run_consumer.py` or similar.
-
 ## 4. Dynamic API Versioning
 
 This project implements a dynamic API versioning strategy that allows for easy management and scaling of different API versions (e.g., `v1`, `v2`). This is achieved by leveraging FastAPI's `APIRouter` and Python's dynamic import capabilities.
