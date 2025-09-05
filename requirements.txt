@@ -9,3 +9,9 @@ requests
 pytest
 celery
 redis
+pydantic
+alembic
+celery-flower
+greenlet
+gevent
+gunicorn

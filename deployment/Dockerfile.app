@@ -19,8 +19,8 @@ EXPOSE 8000
 # Make entrypoint script executable
 RUN chmod +x /app/entrypoint.sh
 
-# Use entrypoint to handle Alembic migrations and app startup
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Copy Celery worker entrypoint and make it executable
+COPY deployment/celery_worker_entrypoint.sh /app/celery_worker_entrypoint.sh
+RUN chmod +x /app/celery_worker_entrypoint.sh
 
-# Default command (can be overridden in docker-compose)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# ENTRYPOINT and CMD will be defined in docker-compose.yml for each service

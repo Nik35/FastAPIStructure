@@ -1,25 +1,19 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.models.models import DnsRequest
+from app.schemas.models import DnsRequest
 from app.schemas.request import DnsRequestCreate
 from app.schemas.response import DnsRequestStatus, ResponseContext, LogMessage
 from app.core.logging import get_logger
-from app.tasks import provision_dns_record
+from app.celery.tasks import provision_dns_record
+import uuid
 
 logger = get_logger(__name__)
 
-router = APIRouter()
-
-@router.post("/create", response_model=DnsRequestStatus, summary="Create a new DNS record request")
-def create_dns_request(
+def create_dns_request_logic(
     request: DnsRequestCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Submits a new DNS record request. The process is handled asynchronously
-    by a Celery task.
-    """
     try:
         logger.info(f"Received DNS request for domain {request.resource.domain} from source {request.context.source}")
         db_request = DnsRequest(
@@ -51,9 +45,53 @@ def create_dns_request(
             status="PENDING",
             message="DNS request submitted and is being processed."
         )
-
     except Exception as e:
         logger.error(f"Error creating DNS request: {e}")
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+def get_dns_request_status_logic(
+    request_id: uuid.UUID,
+    db: Session = Depends(get_db)
+):
+    db_request = db.query(DnsRequest).filter(DnsRequest.id == request_id).first()
+    if not db_request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DNS Request not found")
+
+    return DnsRequestStatus(
+        context=ResponseContext(
+            request_id=db_request.id,
+            partition="default",
+            service="dns",
+            region="us-east-1",
+            account_id="123456789012"
+        ),
+        status=db_request.status,
+        message=f"DNS request status: {db_request.status}"
+    )
+
+def update_dns_request_status_logic(
+    request_id: uuid.UUID,
+    new_status: str,
+    db: Session = Depends(get_db)
+):
+    db_request = db.query(DnsRequest).filter(DnsRequest.id == request_id).first()
+    if not db_request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DNS Request not found")
+
+    db_request.status = new_status
+    db.add(db_request)
+    db.commit()
+    db.refresh(db_request)
+
+    return DnsRequestStatus(
+        context=ResponseContext(
+            request_id=db_request.id,
+            partition="default",
+            service="dns",
+            region="us-east-1",
+            account_id="123456789012"
+        ),
+        status=db_request.status,
+        message=f"DNS request status updated to: {db_request.status}"
+    )
