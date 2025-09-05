@@ -1,17 +1,4 @@
-name: Docker Image CI
-
-on: 
-  push:
-    branches: [ develop ]
-  pull_request:
-    branches: [ develop ]
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
-jobs:
-  build-and-push:
+  build-and-push-worker:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,16 +15,87 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
+      - name: Extract metadata (tags, labels) for Docker (worker)
+        id: meta_worker
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-worker
 
-      - name: Build and push Docker image
+      - name: Build and push Celery worker Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: deployment/Dockerfile.worker
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta_worker.outputs.tags }}
+          labels: ${{ steps.meta_worker.outputs.labels }}
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push-app:
+    name: Build and Push App Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata (tags, labels) for Docker (app)
+        id: meta_app
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Build and push Docker app image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: deployment/Dockerfile.app
+          push: true
+          tags: ${{ steps.meta_app.outputs.tags }}
+          labels: ${{ steps.meta_app.outputs.labels }}
+
+  build-and-push-worker:
+    name: Build and Push Worker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata (tags, labels) for Docker (worker)
+        id: meta_worker
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-worker
+      - name: Build and push Docker worker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: deployment/Dockerfile.worker
+          push: true
+          tags: ${{ steps.meta_worker.outputs.tags }}
+          labels: ${{ steps.meta_worker.outputs.labels }}
