@@ -133,3 +133,35 @@ RUN poetry install --no-dev --no-root
 # ... (rest of your Dockerfile content) ...
 ```
 Remember to adjust the `COPY` commands based on where `pyproject.toml` and `poetry.lock` are relative to your Docker build context.
+
+### Alembic Setup and Usage
+
+This project uses Alembic for database migrations. The migration scripts are located in `app/models/migrations/`.
+
+**Basic Alembic Commands (run with `poetry run`):**
+
+1.  **Initialize Alembic (already done for this project):**
+    ```bash
+    # This command was used to set up alembic.ini and the migrations folder structure.
+    # You typically only run this once per project.
+    alembic init app/models/migrations
+    ```
+    *(Note: This command was simulated, as Alembic was not installed. The files have been manually created.)*
+
+2.  **Create a new migration script:**
+    ```bash
+    poetry run alembic revision --autogenerate -m "Description of your changes"
+    ```
+    This will create a new Python file in `app/models/migrations/versions/` with `upgrade()` and `downgrade()` functions.
+
+3.  **Apply migrations to the database:**
+    ```bash
+    poetry run alembic upgrade head
+    ```
+    This applies all pending migrations to your database.
+
+4.  **Revert migrations:**
+    ```bash
+    poetry run alembic downgrade -1 # Revert the last migration
+    poetry run alembic downgrade base # Revert all migrations
+    ```

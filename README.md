@@ -26,6 +26,47 @@ This is the recommended way to run the entire application stack for development.
 
 The Docker setup now automatically initializes Alembic (if not already present) and applies all database migrations before starting the app, worker, or consumer. Alembic migrations are now located in `app/models/migrations/` for consistency. This is handled by the `deployment/entrypoint.sh` script, so you do not need to run Alembic commands manually.
 
+## Database Migrations (Alembic)
+
+This project uses Alembic for database migrations. The migration scripts are located in `app/models/migrations/`.
+
+**Basic Alembic Commands (run with `poetry run`):**
+
+1.  **Initialize Alembic (already done for this project):**
+    ```bash
+    # This command was used to set up alembic.ini and the migrations folder structure.
+    # You typically only run this once per project.
+    poetry run alembic init app/models/migrations
+    ```
+    *(Note: This command was simulated, as Alembic was not installed. The files have been manually created.)*
+
+2.  **Configure Alembic (`app/models/migrations/env.py`):**
+    - Ensure `app/models/migrations/env.py` correctly imports your SQLAlchemy `Base` and models.
+    - Example snippet from `env.py`:
+      ```python
+      from app.core.database import Base
+      from app.models.models import DnsRequest, DnsRecord # Import all your models
+      target_metadata = Base.metadata
+      ```
+
+3.  **Create a new migration script:**
+    ```bash
+    poetry run alembic revision --autogenerate -m "Description of your changes"
+    ```
+    This will create a new Python file in `app/models/migrations/versions/` with `upgrade()` and `downgrade()` functions.
+
+4.  **Apply migrations to the database:**
+    ```bash
+    poetry run alembic upgrade head
+    ```
+    This applies all pending migrations to your database.
+
+5.  **Revert migrations:**
+    ```bash
+    poetry run alembic downgrade -1 # Revert the last migration
+    poetry run alembic downgrade base # Revert all migrations
+    ```
+
 **Steps:**
 
 1.  **Install Docker and Docker Compose**
