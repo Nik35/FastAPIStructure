@@ -1,35 +1,35 @@
 # Application Architecture and Structure
-
-This document provides an overview of the application's architecture, its key components, and the purpose of each directory.
-
-## 1. High-Level Architecture Flow
-
-The application is designed as a microservice that orchestrates DNS record creation, leveraging FastAPI for the API, Celery for asynchronous tasks, Kafka for messaging, and PostgreSQL for data persistence.
-
 ```mermaid
 graph TD
-    UserAPI[User/API Client] --> FastAPI[FastAPI API Layer]
-    KafkaProd[Kafka Producer (External System)] --> KafkaBroker[Kafka Broker]
-    KafkaBroker --> KafkaCons[Kafka Consumer]
+    UserAPI[User or API Client]
+    KafkaProd[Kafka Producer]
+    KafkaBroker[Kafka Broker]
+    KafkaCons[Kafka Consumer]
+    FastAPI[FastAPI API Layer]
+    APILogic[API Logic with Validation]
+    ReqTracker[Request Tracker Table]
+    DB[Database]
+    CeleryQ[Celery Task Queue]
+    CeleryW[Celery Worker]
+    DNSService[External DNS Service]
+    Logging[Logging]
+
+    UserAPI -->|REST Request| FastAPI
+    KafkaProd -->|Kafka Message| KafkaBroker
+    KafkaBroker --> KafkaCons
     KafkaCons --> FastAPI
-
-    FastAPI --> APILogic[API Logic]
-    APILogic --> ReqTracker[Request Tracker Table]
-    APILogic --> DB[Database]
-    APILogic --> CeleryQ[Celery Task Queue]
-
-    CeleryQ --> CeleryW[Celery Worker]
-    CeleryW --> DNSService[External DNS Service]
-    CeleryW --> ReqTracker
-
-    FastAPI --> Logging[Logging]
+    FastAPI --> ReqTracker
+    FastAPI --> Logging
+    FastAPI --> APILogic
+    APILogic --> ReqTracker
     APILogic --> Logging
-    KafkaCons --> Logging
+    APILogic --> DB
+    APILogic --> CeleryQ
+    CeleryQ --> CeleryW
+    CeleryW --> DNSService
+    CeleryW --> ReqTracker
     CeleryW --> Logging
 ```
-
-**Explanation of Flow:**
-1.  **User/API Client** or **External Kafka Producer** can initiate a DNS request:
     - User/API Client sends a REST request to the FastAPI API layer.
     - External system sends a message to Kafka Broker.
 
