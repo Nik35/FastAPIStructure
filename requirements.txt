@@ -11,7 +11,7 @@ celery
 redis
 pydantic
 alembic
-celery-flower
+flower
 greenlet
 gevent
 gunicorn
