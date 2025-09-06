@@ -20,7 +20,8 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Make entrypoint script executable
+# Copy entrypoint script from deployment/ to /app/ and make it executable
+COPY deployment/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Copy Celery worker entrypoint and make it executable
