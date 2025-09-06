@@ -4,7 +4,7 @@ from app.core.database import get_db
 from app.schemas.request import DnsRequestCreate
 from app.schemas.response import DnsRequestStatus
 import uuid
-from app.api.v1.endpoints.dns import (
+from app.api.v1.api import (
 	create_dns_request_logic,
 	get_dns_request_status_logic,
 	update_dns_request_status_logic

@@ -9,22 +9,45 @@ services:
       POSTGRES_DB: dns_orchestrator
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d dns_orchestrator"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:6.2-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafka:
     image: confluentinc/cp-kafka:7.0.1
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
@@ -34,15 +57,26 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: '1'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-    app:
+  app:
     build:
       context: .
-      dockerfile: deployment/Dockerfile.app # Use Dockerfile.app
+      dockerfile: deployment/Dockerfile.app
     depends_on:
-      - postgres
-      - kafka
-      - redis
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
     environment:
@@ -55,14 +89,28 @@ services:
       DB_USER: user
       DB_PASSWORD: password
       DB_NAME: dns_orchestrator
+      # SSO Configuration
+      SSO_ENDPOINT: ${SSO_ENDPOINT:-https://your-sso-provider.com}
+      SSO_CLIENT_ID: ${SSO_CLIENT_ID}
+      SSO_CLIENT_SECRET: ${SSO_CLIENT_SECRET}
+    entrypoint: ["/app/entrypoint.sh"]
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   consumer:
     build:
       context: .
-      dockerfile: deployment/Dockerfile.app # Consumer also uses the app image
+      dockerfile: deployment/Dockerfile.app
     depends_on:
-      - kafka
-    command: python scripts/run_consumer.py # Updated path for consumer script
+      kafka:
+        condition: service_healthy
+      app:
+        condition: service_healthy
     environment:
       ENV: ${ENV:-dev}
       DATABASE_URL: "postgresql://user:password@postgres/dns_orchestrator"
@@ -73,13 +121,18 @@ services:
       DB_USER: user
       DB_PASSWORD: password
       DB_NAME: dns_orchestrator
+    command: ["python", "scripts/run_consumer.py"]
+    restart: unless-stopped
 
   worker:
     build:
       context: .
-      dockerfile: deployment/Dockerfile.worker # Use Dockerfile.worker
+      dockerfile: deployment/Dockerfile.worker
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     environment:
       ENV: ${ENV:-dev}
       DATABASE_URL: "postgresql://user:password@postgres/dns_orchestrator"
@@ -89,43 +142,15 @@ services:
       DB_USER: user
       DB_PASSWORD: password
       DB_NAME: dns_orchestrator
-      CELERY_WORKER_CONCURRENCY: 2 # Example: Set concurrency for this worker
-      CELERY_QUEUE: dns_tasks # Example: Set queue for this worker
-      CELERY_WORKER_LOG_LEVEL: INFO # Example: Set log level
+      CELERY_WORKER_CONCURRENCY: ${CELERY_WORKER_CONCURRENCY:-2}
+      CELERY_QUEUE: ${CELERY_QUEUE:-dns_tasks}
+      CELERY_WORKER_LOG_LEVEL: ${CELERY_WORKER_LOG_LEVEL:-INFO}
+    entrypoint: ["/app/celery_worker_entrypoint.sh"]
+    restart: unless-stopped
 
-    entrypoint: ["/app/entrypoint.sh"] # Use the main entrypoint for the app
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] # Default command for the app
-
-  consumer:
-    build: .
-    depends_on:
-      - kafka
-    command: python scripts/run_consumer.py # Updated path for consumer script
-    environment:
-      ENV: ${ENV:-dev}
-      DATABASE_URL: "postgresql://user:password@postgres/dns_orchestrator"
-      KAFKA_BROKER_URL: "kafka:29092"
-      API_URL: "http://app:8000/api/v1/dns/create"
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: user
-      DB_PASSWORD: password
-      DB_NAME: dns_orchestrator
-
-  worker:
-    build: .
-    depends_on:
-      - redis
-    entrypoint: ["/app/celery_worker_entrypoint.sh"] # Use the new worker entrypoint
-    environment:
-      ENV: ${ENV:-dev}
-      DATABASE_URL: "postgresql://user:password@postgres/dns_orchestrator"
-      CELERY_BROKER_URL: "redis://redis:6379/0"
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: user
-      DB_PASSWORD: password
-      DB_NAME: dns_orchestrator
-      CELERY_WORKER_CONCURRENCY: 2 # Example: Set concurrency for this worker
-      CELERY_QUEUE: dns_tasks # Example: Set queue for this worker
-      CELERY_WORKER_LOG_LEVEL: INFO # Example: Set log level
+volumes:
+  postgres_data:
+  redis_data:
+  zookeeper_data:
+  zookeeper_logs:
+  kafka_data:

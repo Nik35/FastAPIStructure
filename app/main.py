@@ -42,3 +42,15 @@ for version_pkg in routes_path.iterdir():
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the DNS Orchestrator API"}
+
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint for container orchestration.
+    """
+    return {
+        "status": "healthy",
+        "service": "dns-orchestrator",
+        "version": "1.0.0",
+        "timestamp": "2024-01-01T00:00:00Z"
+    }
